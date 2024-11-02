@@ -1,0 +1,16 @@
+srun --partition=ucsx --gres gpu:2 ./chat.py
+
+srun --partition=ucsx --gres gpu:2 --pty bash
+
+randport() {
+    comm -23 <(seq 10000 65000) \
+             <(ss -tuan | \
+               awk '{print $4}' | \
+               cut -d':' -f2 | \
+               grep "[0-9]\{1,5\}" | \
+               sort | \
+               uniq) \
+    | shuf | head -n 1
+}
+
+jupyter lab --browser="google-chrome-stable %s" --ip 0.0.0.0 --port $(randport)
