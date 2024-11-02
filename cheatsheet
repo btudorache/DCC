@@ -1,5 +1,10 @@
+# run program on partition
 srun --partition=ucsx --gres gpu:2 ./chat.py
 
+# list partitions
+sinfo -o "%10P %30N %10c %10m %20G "
+
+# attach bash to partition
 srun --partition=ucsx --gres gpu:2 --pty bash
 
 randport() {
@@ -14,4 +19,6 @@ randport() {
 }
 
 jupyter notebook --ip 0.0.0.0 --no-browser --port $(randport)
-use bond0.33 interface
+# use bond0.33 interface
+
+IMPORTANT: The model you are using is automatically downloaded to ~/.cache/huggingface/hub/
