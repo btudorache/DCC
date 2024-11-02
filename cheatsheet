@@ -13,4 +13,5 @@ randport() {
     | shuf | head -n 1
 }
 
-jupyter lab --browser="google-chrome-stable %s" --ip 0.0.0.0 --port $(randport)
+jupyter notebook --ip 0.0.0.0 --no-browser --port $(randport)
+use bond0.33 interface
