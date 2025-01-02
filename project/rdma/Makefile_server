@@ -1,0 +1,18 @@
+CC = gcc
+CFLAGS = -Wall -Wextra -O2
+LDFLAGS = -libverbs
+
+SRC = rdma_server.c rdma_lib.c
+OBJ = $(SRC:.c=.o)
+TARGET = rdma_server
+
+all: $(TARGET)
+
+$(TARGET): $(OBJ)
+	$(CC) $(OBJ) -o $@ $(LDFLAGS)
+
+%.o: %.c rdma_lib.h
+	$(CC) $(CFLAGS) -c $< -o $@
+
+clean:
+	rm -f $(OBJ) $(TARGET)

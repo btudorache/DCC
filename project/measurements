@@ -1,0 +1,31 @@
+RDMA ALLTOALL:
+100 STAGES:
+run1 - 0m1.332s
+run2 - 0m0.625s
+run3 - 0m0.933s
+
+1000 STAGES:
+run1 - 0m4.923s
+run2 - 0m8.165s
+run3 - 0m6.903s
+
+10000 STAGES:
+run1 - 1m8.447s
+run2 - 1m5.470s
+run3 - 1m7.065s
+
+MPI ALLTOALL:
+100 STAGES:
+run1 - 0m1.718s
+run2 - 0m1.734s
+run3 - 0m1.749s
+
+1000 STAGES:
+run1 - 0m4.468s
+run2 - 0m3.923s
+run3 - 0m4.131s
+
+10000 STAGES:
+run1 - 0m27.979s
+run2 - 0m27.669s
+run3 - 0m31.357s

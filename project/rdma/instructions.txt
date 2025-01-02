@@ -1,0 +1,9 @@
+// create rxe interface
+sudo rdma link add <netdev>rxe type rxe netdev <netdev>
+
+// run server
+./rdma_server
+
+// run clients
+./rdma_client 1 192.168.50.177
+./rdma_client 2 192.168.50.57
