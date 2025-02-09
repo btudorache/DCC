@@ -1,7 +1,8 @@
 # RDMA Client-Server Library
 
 ## Library Location
-The RDMA library is located at /project/rdma. This directory contains all the necessary source files and headers for building and using the library rdma_lib.c and rdma_lib.h
+
+The RDMA library is located at `/project/rdma`. This directory contains all the necessary source files and headers for building and using the library (rdma_lib.c and rdma_lib.h).
 
 ## Introduction
 
@@ -72,34 +73,138 @@ int rdma_sequential_alltoall(rdma_context *ctx, const void *send_buf,
 const char* rdma_get_error(void);
 ```
 
-## Usage Example
+## Usage Examples
 
-Here's a simple example of how to use the library as a client:
+### Server Example
+
+Here's a complete example of a server that accepts two clients and performs all-to-all communication:
 
 ```c
 #include "rdma_lib.h"
+#include <stdio.h>
+#include <string.h>
 
-int main() {
+#define PORT 5555
+#define MSG_SIZE 64
+#define NUM_CLIENTS 2
+
+int main(void) {
+    const char *server_ip = "192.168.50.59";
+    printf("Server starting on IP %s...\n", server_ip);
+
+    // Initialize server context
+    rdma_context *ctx = rdma_init(server_ip, PORT, BUFFER_SIZE * 4, true);
+    if (!ctx) {
+        fprintf(stderr, "Failed to initialize RDMA: %s\n", rdma_get_error());
+        return 1;
+    }
+
+    // Accept client connections
+    for (int i = 0; i < NUM_CLIENTS; i++) {
+        printf("Waiting for client %d...\n", i + 1);
+        if (rdma_accept_peer(ctx) < 0) {
+            fprintf(stderr, "Failed to accept client %d: %s\n", 
+                    i + 1, rdma_get_error());
+            rdma_cleanup(ctx);
+            return 1;
+        }
+        printf("Client %d connected\n", i + 1);
+    }
+
+    // Send start signal to all clients
+    const char *start_msg = "START";
+    for (int i = 0; i < NUM_CLIENTS; i++) {
+        if (rdma_send(ctx, i, start_msg, strlen(start_msg) + 1) < 0) {
+            fprintf(stderr, "Failed to send start message\n");
+            rdma_cleanup(ctx);
+            return 1;
+        }
+    }
+
+    // Perform all-to-all communication
+    char send_msg[MSG_SIZE];
+    char recv_buf[BUFFER_SIZE];
+
+    snprintf(send_msg, sizeof(send_msg), "Server Message");
+    printf("Sending: '%s'\n", send_msg);
+
+    if (rdma_sequential_alltoall(ctx, send_msg, recv_buf, MSG_SIZE) < 0) {
+        fprintf(stderr, "All-to-all failed: %s\n", rdma_get_error());
+        rdma_cleanup(ctx);
+        return 1;
+    }
+
+    printf("Received combined messages: '%s'\n", recv_buf);
+
+    // Cleanup
+    rdma_cleanup(ctx);
+    return 0;
+}
+```
+
+### Client Example
+
+Here's a complete example of a client that connects to the server and participates in all-to-all communication:
+
+```c
+#include "rdma_lib.h"
+#include <stdio.h>
+#include <string.h>
+
+#define PORT 5555
+#define MSG_SIZE 64
+
+int main(int argc, char *argv[]) {
+    if (argc != 3) {
+        fprintf(stderr, "Usage: %s <client_id> <client_ip>\n", argv[0]);
+        return 1;
+    }
+
+    int client_id = atoi(argv[1]);
+    const char *client_ip = argv[2];
+    const char *server_ip = "192.168.50.59";
+
+    printf("Client %d starting on IP %s...\n", client_id, client_ip);
+
     // Initialize client context
-    rdma_context *ctx = rdma_init("192.168.1.10", 5555, 4096, false);
+    rdma_context *ctx = rdma_init(client_ip, PORT, BUFFER_SIZE * 4, false);
     if (!ctx) {
         fprintf(stderr, "Failed to initialize RDMA: %s\n", rdma_get_error());
         return 1;
     }
 
     // Connect to server
-    int server_idx = rdma_connect_peer(ctx, "192.168.1.1", 5555);
+    printf("Connecting to server %s...\n", server_ip);
+    int server_idx = rdma_connect_peer(ctx, server_ip, PORT);
     if (server_idx < 0) {
-        fprintf(stderr, "Failed to connect: %s\n", rdma_get_error());
+        fprintf(stderr, "Failed to connect to server: %s\n", rdma_get_error());
         rdma_cleanup(ctx);
         return 1;
     }
 
-    // Send data
-    const char *message = "Hello RDMA!";
-    if (rdma_send(ctx, server_idx, message, strlen(message) + 1) < 0) {
-        fprintf(stderr, "Send failed: %s\n", rdma_get_error());
+    // Wait for start signal
+    char start_msg[MSG_SIZE];
+    if (rdma_recv(ctx, server_idx, start_msg, MSG_SIZE) < 0) {
+        fprintf(stderr, "Failed to receive start signal\n");
+        rdma_cleanup(ctx);
+        return 1;
     }
+    printf("Received start signal: %s\n", start_msg);
+
+    // Participate in all-to-all communication
+    char send_msg[MSG_SIZE];
+    char recv_buf[BUFFER_SIZE];
+
+    snprintf(send_msg, sizeof(send_msg), "Client %d Message", client_id);
+    printf("Sending: '%s'\n", send_msg);
+
+    if (rdma_sequential_alltoall(ctx, send_msg, recv_buf, MSG_SIZE) < 0) {
+        fprintf(stderr, "All-to-all failed: %s\n", rdma_get_error());
+        rdma_cleanup(ctx);
+        return 1;
+    }
+
+    printf("Received combined messages: '%s'\n", recv_buf);
 
     // Cleanup
     rdma_cleanup(ctx);
